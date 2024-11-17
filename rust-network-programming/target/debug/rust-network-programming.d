@@ -1,0 +1,1 @@
+/home/ziad/git/network-programming/rust-network-programming/target/debug/rust-network-programming: /home/ziad/git/network-programming/rust-network-programming/src/get_all_interfaces_ips.rs /home/ziad/git/network-programming/rust-network-programming/src/main.rs
