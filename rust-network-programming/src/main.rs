@@ -1,61 +1,52 @@
-// use if_addrs::get_if_addrs;
+use if_addrs::get_if_addrs;
 use std::io;
 // use std::net::IpAddr;
 mod get_all_interfaces_ips;
-use get_all_interfaces_ips::get_interf_and_ip;
-#[cfg(target_os = "windows")]
-use winapi::um::winsock2::{WSACleanup, WSAStartup, WSADATA};
+use chrono::{Local, TimeZone};
+use get_all_interfaces_ips::{get_interf_and_ip, get_interfaces};
+use std::io::Write;
+use std::net::{TcpListener, TcpStream};
 
-// fn get_all_ip_addrs() -> io::Result<()> {
-//     // Retrieve all network interfaces
-//     let if_addrs = get_if_addrs()?;
+fn main() -> std::io::Result<()> {
+    // Start a TCP listener on port 8080
+    let listener = TcpListener::bind("0.0.0.0:5000")?;
+    println!("The server is running on 0.0.0.0:5000");
 
-//     // Loop through each interface
-//     for iface in if_addrs {
-//         // Extract the name and IP address type
-//         let name = iface.name;
-//         let ip = iface.addr.ip();
-
-//         // Check if it is IPv4 or IPv6
-//         let ip_type = match ip {
-//             IpAddr::V4(_) => "IPv4",
-//             IpAddr::V6(_) => "IPv6",
-//         };
-
-//         // Print the interface name, address type, and IP address
-//         println!("{}\t{}\t{}", name, ip_type, ip);
-//     }
-
-//     Ok(())
-// }
-
-#[cfg(target_os = "windows")]
-fn set_up_socket_for_win_and_linux() -> io::Result<()> {
-    let mut data: WSADATA = unsafe { std::mem::zeroed() };
-    if unsafe { WSAStartup(0x0202, &mut data) } != 0 {
-        eprintln!("Failed to initialize.");
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            "Failed to initialize.",
-        ));
-    }
-
-    println!("Ready to use socket API In Windows.");
-
-    unsafe {
-        WSACleanup();
+    for stream in listener.incoming() {
+        match stream {
+            Ok(stream) => {
+                println!("New connection received!");
+                handle_income(stream);
+            }
+            Err(e) => {
+                eprintln!("Connection error: {}", e);
+            }
+        }
     }
 
     Ok(())
 }
 
-#[cfg(not(target_os = "windows"))]
-fn set_up_socket_for_win_and_linux() -> io::Result<()> {
-    println!("Ready to use socket API from linux.");
-    Ok(())
-}
+fn handle_income(mut stream: TcpStream) {
+    let now = Local::now();
 
-fn main() {
-    // let _ = set_up_socket_for_win_and_linux();
-    let _ = get_interf_and_ip();
+    // Create an HTTP response
+    let body = format!(
+        "Hi iam Ziad Mostafa and this is my TCP Socket\nCurrent time: {}",
+        now.format("%Y-%m-%d %H:%M:%S")
+    );
+    let response = format!(
+        "HTTP/1.1 200 OK\r\n\
+        Content-Type: text/plain; charset=UTF-8\r\n\
+        Content-Length: {}\r\n\
+        Connection: close\r\n\r\n\
+        {}",
+        body.len(),
+        body
+    );
+
+    // Send the response to the client
+    if let Err(e) = stream.write_all(response.as_bytes()) {
+        eprintln!("Failed to send the response: {}", e);
+    }
 }
